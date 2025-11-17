@@ -1,15 +1,6 @@
 test_input = """
-R 4
-U 4
-L 3
-D 1
-R 4
-D 1
-L 5
-R 2
+2333133121414131402
 """
-from pprint import pprint
-
 
 def read_input(fname=None):
 	if fname is None:
@@ -18,57 +9,74 @@ def read_input(fname=None):
 		with open(fname) as f:
 			data = f.read()
 
-	data = data.splitlines()
-	data = [d.split(' ') for d in data]
+	return data.strip()
 
+def unpack(data):
+	unpacked_data = []
+	for fid, i in enumerate(range(0, len(data), 2)):
+		fill = int(data[i])
+		free = int(data[i+1]) if i+1 < len(data) else 0
+		unpacked_data.extend([fid] * fill)  # Use fid as int, not string
+		unpacked_data.extend([-1] * free)   # Use -1 for free space instead of '.'
+	return unpacked_data
+
+
+def calculate_checksum(data):
+	checksum = 0
+	for i, ch in enumerate(data):
+		if ch != -1:
+			checksum += ch * i
+	return checksum
+
+
+def get_next_free(data):
+	for i, ch in enumerate(data):
+		if ch == -1:
+			return i
+	return -1
+
+def free_space(data):
+	""" defragment data - optimized with two pointers """
+	left = 0  # Pointer for next free space
+	right = len(data) - 1  # Pointer for next file block
+	
+	while left < right:
+		# Find next free space from left
+		while left < len(data) and data[left] != -1:
+			left += 1
+		
+		# Find next file block from right
+		while right >= 0 and data[right] == -1:
+			right -= 1
+		
+		# Stop if pointers crossed
+		if left >= right:
+			break
+		
+		# Swap file block with free space
+		data[left], data[right] = data[right], data[left]
+		left += 1
+		right -= 1
+	
 	return data
 
-
-def move_head(head_pos, direction, steps):
-    x, y = head_pos
-    if direction == 'R':
-        y += steps
-    elif direction == 'L':
-        y -= steps
-    elif direction == 'U':
-        x -= steps
-    elif direction == 'D':
-        x += steps
-    return (x, y)
-
-def move_tail(head_pos, tail_pos, direction, steps):
-	hx, hy = head_pos
-	tx, ty = tail_pos
-
-	for _ in range(steps):
-		# Move head one step at a time
-		if direction == 'R':
-			hy += 1
-		elif direction == 'L':
-			hy -= 1
-		elif direction == 'U':
-			hx -= 1
-		elif direction == 'D':
-			hx += 1
-
-		# Update tail position based on head position
-		if abs(hx - tx) > 1 or abs(hy - ty) > 1:
-			if hx > tx:
-				tx += 1
-			elif hx < tx:
-				tx -= 1
-			if hy > ty:
-				ty += 1
-			elif hy < ty:
-				ty -= 1
-
-	return (tx, ty)
+def to_str(data):
+	result = []
+	for ch in data:
+		if ch == -1:
+			result.append('.')
+		else:
+			result.append(str(ch))
+	return ''.join(result)
 
 def main():
-	# data = read_input('input.txt')
-	data = read_input()
-	print(data)
-
+	data = read_input('day9/input.txt')
+	# data = read_input()
+	unpacked = unpack(data)
+	print(f"Unpacked: {to_str(unpacked)}")
+	defragmented = free_space(unpacked)
+	print(f"Defragmented: {to_str(defragmented)}")
+	print("Checksum:", calculate_checksum(defragmented))
 
 if __name__ == '__main__':
 	main()
